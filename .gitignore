@@ -50,3 +50,4 @@ coverage/
 Thumbs.db
 .cache/
 .log/
+*.local
