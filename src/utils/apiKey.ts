@@ -1,3 +1,4 @@
+// apiKey.ts
 import { promises as fs } from "fs";
 import * as path from "path";
 import { log } from "@clack/prompts";
@@ -5,32 +6,38 @@ import chalk from "chalk";
 
 const envFilePath = path.resolve(process.cwd(), ".env.local");
 
-async function set(apiKey: string) {
+async function set(apiKey: string, provider: "openai" | "anthropic") {
     try {
-        const envContent = `OPENAI_API_KEY=${apiKey}\n`;
+        const envVar = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
+        let envContent = await fs.readFile(envFilePath, "utf8").catch(() => "");
+        
+        // Remove existing key if present
+        envContent = envContent.replace(new RegExp(`^${envVar}=.*$`, "m"), "");
+        
+        // Add new key
+        envContent += `\n${envVar}=${apiKey}\n`;
 
-        await fs.writeFile(envFilePath, envContent, { flag: "a" });
+        await fs.writeFile(envFilePath, envContent.trim());
 
-        log.success(`Chave da API salva em ${chalk.cyan(envFilePath)}`);
+        log.success(`${provider.toUpperCase()} API key saved in ${chalk.cyan(envFilePath)}`);
     } catch (err) {
         log.error(
-            "Erro ao salvar a chave de API. Entre em contato com o suporte se o problema persistir."
+            `Error saving ${provider.toUpperCase()} API key. Contact support if the problem persists.`
         );
     }
 }
 
-async function get(): Promise<string | null> {
+async function get(provider: "openai" | "anthropic"): Promise<string | null> {
     try {
         const data = await fs.readFile(envFilePath, "utf8");
+        const envVar = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
 
-        const match = data.match(/^OPENAI_API_KEY=(.+)$/m);
+        const match = data.match(new RegExp(`^${envVar}=(.+)$`, "m"));
         if (match && match[1]) {
-            return match[1];
+            return match[1].trim();
         } else {
             log.error(
-                `Chave de API não encontrada no arquivo ${chalk.cyan(
-                    envFilePath
-                )}.`
+                `${provider.toUpperCase()} API key not found in ${chalk.cyan(envFilePath)}.`
             );
             return null;
         }
